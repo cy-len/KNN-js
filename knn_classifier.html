@@ -1,0 +1,205 @@
+<html>
+    <head>
+        <title>KNN Classifier</title>
+    </head>
+    
+    <body>
+        
+        <div id="ui">
+            <span>Fièvre : </span><input type="number" min="0" max="10" value="0" id="fever" /> <br />
+            <span>Toux : </span><input type="number" min="0" max="10" value="0" id="cough" /> <br />
+            <span>Mal de tête : </span><input type="number" min="0" max="10" value="0" id="headache" /> <br />
+            <span>Mal de gorge : </span><input type="number" min="0" max="10" value="0" id="sorethroat" /> <br />
+            <span>Écoulement nasal : </span><input type="number" min="0" max="10" value="0" id="snuff" /> <br />
+            <span>Mal de ventre : </span><input type="number" min="0" max="10" value="0" id="stomachache" /> <br />
+            <span>Diarrhée : </span><input type="number" min="0" max="10" value="0" id="diarrhea" /> <br />
+            <input type="button" value="Trouver la maladie" onclick="findDisease();" />
+            <h2 id="result"></h2>
+        </div>
+        
+        <script src="dataset.js" type="text/javascript"></script>
+        
+        <script type="text/javascript">
+            
+            class KNNBrain
+            {
+                constructor()
+                {
+                    this.data = [];
+                    
+                    this.distanceFunction = this.euclidianDistance;
+                }
+                
+                addDataset(dataset)
+                {
+                    if (!(dataset instanceof Array))
+                    {
+                        console.error("dataset needs to be an array of objects");
+                        return;
+                    }
+                    
+                    for (let i = 0; i < dataset.length; i++)
+                    {
+                        this.data.push(dataset[i]);
+                    }
+                }
+                
+                nearestNeighbours(item, k)
+                {
+                    if (k > this.data.length)
+                    {
+                        console.error("k is greater than dataset's size");
+                        return;
+                    }
+                    
+                    let nn = [];
+                    
+                    for (let n = 0; n < k; n++)
+                    {
+                        let nearest = this.data[0];
+                        
+                        for (let i = 1; i < this.data.length; i++)
+                        {
+                            let elt = this.data[i];
+                            
+                            if (this.distanceFunction(elt, item) < this.distanceFunction(nearest, item) && nn.indexOf(elt) < 0)
+                            {
+                                nearest = elt;
+                            }
+                        }
+                        
+                        nn.push(nearest);
+                    }
+                    
+                    return nn;
+                }
+                
+                classify(item, k = 5)
+                {
+                    let nn = this.nearestNeighbours(item, k);
+                    
+                    let pickedClasses = {};
+                    
+                    for (let i = 0; i < nn.length; i++)
+                    {
+                        let elt = nn[i];
+                        
+                        if (pickedClasses.hasOwnProperty(elt.class))
+                        {
+                            pickedClasses[elt.class]++;
+                        }
+                        else
+                        {
+                            pickedClasses[elt.class] = 1;
+                        }
+                    }
+                    
+                    let bestClass = {
+                        name: "sample text",
+                        score: -Infinity
+                    };
+                    
+                    for (let c in pickedClasses)
+                    {
+                        let s = pickedClasses[c];
+                        
+                        if (s > bestClass.score)
+                        {
+                            bestClass = {
+                                name: c,
+                                score: s
+                            };
+                        }
+                    }
+                    
+                    return bestClass.name;
+                }
+                
+                predictMissingProperties(item, k = 5)
+                {
+                    let predictions = {};
+                    
+                    let nn = this.nearestNeighbours(item, k);
+                    
+                    let fnn = nn[0];
+                    
+                    for (let prop in fnn.properties)
+                    {
+                        if (!item.properties.hasOwnProperty(prop))
+                        {
+                            let sum = 0;
+                            for (let i = 0; i < k; i++)
+                            {
+                                sum += nn[i].properties[prop];
+                            }
+                            
+                            sum /= k;
+                            predictions[prop] = sum;
+                        }
+                    }
+                    
+                    return predictions;
+                }
+                
+                euclidianDistance(a, b)
+                {
+                    let sum = 0;
+                    
+                    for (let prop in a.properties)
+                    {
+                        if (b.properties.hasOwnProperty(prop))
+                        {
+                            let diff = a.properties[prop] - b.properties[prop];
+                            sum += diff * diff;
+                        }
+                    }
+                    
+                    return Math.sqrt(sum);
+                }
+            }
+            
+            let c = new KNNBrain();
+            setTimeout(function() {
+                c.addDataset(dataset);
+            }, 10);
+            
+            // Fields
+            let fever = document.getElementById("fever"),
+                cough = document.getElementById("cough"),
+                headache = document.getElementById("headache"),
+                sorethroat = document.getElementById("sorethroat"),
+                snuff = document.getElementById("snuff"),
+                stomachache = document.getElementById("stomachache"),
+                diarrhea = document.getElementById("diarrhea");
+            
+            let result = document.getElementById("result");
+            
+            function createObject()
+            {
+                return {
+                    class: "Pending",
+                    properties: {
+                        fever: parseFloat(fever.value),
+                        cough: parseFloat(cough.value),
+                        sorethroat: parseFloat(sorethroat.value),
+                        snuff: parseFloat(snuff.value),
+                        headache: parseFloat(headache.value),
+                        stomachache: parseFloat(stomachache.value),
+                        diarrhea: parseFloat(diarrhea.value)
+                    }
+                };
+            }
+            
+            function findDisease()
+            {
+                let item = createObject();
+                
+                let disease = c.classify(item);
+                
+                result.innerHTML = "Il est probable que vous soyez atteint par : " + disease;
+            }
+            
+        </script>
+        
+    </body>
+</html>
